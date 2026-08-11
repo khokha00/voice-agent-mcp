@@ -21,23 +21,27 @@ def researcher_node(state: GraphState) -> dict:
     all_findings: list[Finding] = []
 
     for step in state.plan:
-        results = web_search(step.question)
-        if not results:
+        try:
+            results = web_search(step.question)
+            if not results:
+                continue
+
+            results_text = "\n\n".join(
+                f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['snippet']}"
+                for r in results
+            )
+            user_prompt = f"Sub-question: {step.question}\n\nSearch results:\n{results_text}"
+
+            result = call_llm_json(SYSTEM_PROMPT, user_prompt)
+            for c in result.get("claims", []):
+                if c.get("claim") and c.get("source_url"):
+                    all_findings.append(Finding(
+                        claim=c["claim"],
+                        source_url=c["source_url"],
+                        source_title=c.get("source_title", ""),
+                    ))
+        except Exception as e:
+            print(f"  [researcher: skipping step {step.question!r} — {e}]")
             continue
-
-        results_text = "\n\n".join(
-            f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['snippet']}"
-            for r in results
-        )
-        user_prompt = f"Sub-question: {step.question}\n\nSearch results:\n{results_text}"
-
-        result = call_llm_json(SYSTEM_PROMPT, user_prompt)
-        for c in result.get("claims", []):
-            if c.get("claim") and c.get("source_url"):
-                all_findings.append(Finding(
-                    claim=c["claim"],
-                    source_url=c["source_url"],
-                    source_title=c.get("source_title", ""),
-                ))
 
     return {"findings": all_findings}
