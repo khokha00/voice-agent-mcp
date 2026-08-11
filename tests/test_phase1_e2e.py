@@ -1,7 +1,7 @@
 """Phase 1 end-to-end acceptance test: 5 varied questions through the full
 Planner -> Researcher -> Writer graph, per CHARTER.md Phase 1 definition of done."""
 from src.state import GraphState
-from src.graph import build_phase1_graph
+from src.graph import build_graph
 
 TEST_QUESTIONS = [
     "What caused the 2008 financial crisis?",
@@ -12,7 +12,7 @@ TEST_QUESTIONS = [
 ]
 
 if __name__ == "__main__":
-    graph = build_phase1_graph()
+    graph = build_graph()
 
     for i, q in enumerate(TEST_QUESTIONS, 1):
         print(f"\n{'='*60}\n[{i}/5] {q}\n{'='*60}")
