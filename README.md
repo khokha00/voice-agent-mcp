@@ -1,48 +1,108 @@
+# voice-agent-mcp
 
-**Never commit `.env` or paste real keys anywhere public** — if a key is
-ever exposed, rotate it immediately at the links above.
+A multi-agent research assistant. Give it a question, and a LangGraph pipeline
+of **Planner → Researcher → Writer → Critic** agents investigates it using
+real tools — live web search and a custom MCP server for personal Notion
+notes — and produces a structured, sourced report. A revision loop lets the
+Critic send weak or uncited work back for another pass, capped so it always
+terminates.
+
+## How it works
+
+```
+question
+   │
+   ▼
+Planner    ──▶ breaks the question into 2–3 sub-questions
+   │
+   ▼
+Researcher ──▶ for each sub-question, searches the web or Notion
+   │           (via a custom MCP server) and extracts sourced claims
+   ▼
+Writer     ──▶ turns findings into a structured report
+   │
+   ▼
+Critic     ──▶ approves, or routes back to Researcher (thin findings)
+   │           or Writer (poor phrasing) — max 2 revision cycles
+   ▼
+final report
+```
+
+## Stack
+
+- **LangGraph** — agent orchestration and shared state
+- **Groq** — LLM inference (OpenAI-compatible REST API)
+- **`ddgs`** — free web search
+- **MCP** (`mcp[cli]`) — custom server exposing Notion as agent tools
+- **Notion API** — personal notes, via the custom MCP server
+- **Pydantic** — shared `GraphState` schema
+- **uv** — dependency management
+
+## Project structure
+
+```
+voice-agent-mcp/
+├── CHARTER.md
+├── .env.example
+├── src/
+│   ├── state.py
+│   ├── llm.py
+│   ├── graph.py
+│   ├── agents/
+│   │   ├── planner.py
+│   │   ├── researcher.py
+│   │   ├── writer.py
+│   │   └── critic.py
+│   ├── tools/
+│   │   └── search.py
+│   └── mcp_server/
+│       ├── notion_tools.py
+│       ├── server.py
+│       └── client.py
+└── tests/
+```
+
+## Setup
+
+```bash
+uv sync
+cp .env.example .env
+```
+
+Fill in `.env`:
+```
+GROQ_API_KEY=...              # console.groq.com/keys
+GROQ_MODEL=openai/gpt-oss-120b
+NOTION_API_KEY=...             # notion.so/my-integrations
+NOTION_PARENT_PAGE_ID=...      # page must be shared with your integration
+```
+
+Never commit `.env` or share real keys — rotate immediately if one leaks.
 
 ## Running it
 
 ```bash
-# Run the full pipeline on a set of test questions
-uv run python -m tests.test_phase1_e2e
-```
-
-Individual component tests:
-```bash
-uv run python -m tests.test_planner              # Planner only
-uv run python -m tests.test_researcher            # Planner + Researcher
-uv run python -m tests.test_researcher_routing    # tool-selection heuristic
-uv run python -m tests.test_phase2_revision       # Critic revision loop
-uv run python -m tests.test_notion_tools          # raw Notion API calls
-uv run python -m tests.test_mcp_server_standalone # MCP protocol layer
+uv run python -m tests.test_phase1_e2e        # full pipeline, 5 questions
+uv run python -m tests.test_planner
+uv run python -m tests.test_researcher
+uv run python -m tests.test_researcher_routing
+uv run python -m tests.test_phase2_revision
+uv run python -m tests.test_notion_tools
+uv run python -m tests.test_mcp_server_standalone
 ```
 
 ## Known limitations
 
-- **Groq free-tier rate limits.** The pipeline can make 8–12+ LLM calls per
-  question (Planner, one extraction call per sub-question, Writer, Critic,
-  plus any revision cycles). `src/llm.py` retries on HTTP 429 with backoff,
-  but sustained low-RPM limits will still slow multi-question runs. Tool
-  selection in the Researcher uses a cheap keyword heuristic rather than an
-  LLM call specifically to reduce call volume — see the comment in
-  `researcher.py` for the heuristic's known edge cases.
-- **Notion tool routing is a heuristic, not learned.** Questions must contain
-  a signal phrase (e.g. "my notes") to route to Notion; otherwise they go to
-  web search. Misses on unusual phrasing are expected.
-- **MCP server spins up a fresh subprocess per tool call** (`client.py`) —
-  simple and correct, not optimized for call volume.
-- **DuckDuckGo search can rate-limit or time out** under load; `search.py`
-  retries with backoff and returns an empty result set (not a crash) if all
-  retries fail — the Researcher then just skips that sub-question rather
-  than aborting the whole run.
-- **Voice I/O (Phase 4) is incomplete**: `src/voice/stt.py` exists and can
-  transcribe an audio file or record from a mic (needs `libportaudio2` at
-  the OS level), but it isn't called anywhere in `graph.py`, and there is no
-  TTS output yet.
+- Groq's free tier rate-limits fairly aggressively; `llm.py` retries with
+  backoff on 429s, but heavy runs will still slow down.
+- Notion tool routing uses a keyword heuristic ("my notes", etc.), not an
+  LLM decision — cheap, but misses on unusual phrasing.
+- The MCP client spins up a fresh server subprocess per call — simple, not
+  optimized for volume.
+- DuckDuckGo search retries on failure and returns an empty result rather
+  than crashing; the Researcher just skips that sub-question.
 
-## Non-goals (see CHARTER.md)
+## Non-goals
 
-No web UI, no real-time/streaming voice, only one custom MCP server, no
-persisted conversation history across sessions, single-user/local only.
+No web UI, no real-time streaming, one custom MCP server only, no
+persisted conversation history, single-user/local only.
