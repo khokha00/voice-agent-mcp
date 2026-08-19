@@ -77,6 +77,8 @@ def create_page(title: str, content: str) -> dict:
         },
         timeout=30,
     )
+    if not resp.ok:
+       print("Notion error:", resp.text)
     resp.raise_for_status()
     data = resp.json()
     return {"id": data["id"], "url": data.get("url", "")}
@@ -90,3 +92,13 @@ def _extract_title(page_obj: dict) -> str:
             title_parts = prop.get("title", [])
             return "".join(t.get("plain_text", "") for t in title_parts)
     return page_obj.get("id", "untitled")
+
+def get_page(page_id: str) -> dict:
+    """Retrieve a Notion page by ID."""
+    resp = requests.get(
+        f"{BASE_URL}/pages/{page_id}",
+        headers=HEADERS,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()

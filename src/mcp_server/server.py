@@ -1,10 +1,10 @@
 """MCP server exposing Notion tools over the MCP protocol.
 Run standalone: `uv run python -m src.mcp_server.server`
 """
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from src.mcp_server.notion_tools import search_pages, get_page_content, create_page
 
-mcp = FastMCP("notion-research-tools")
+mcp = MCPServer("notion-research-tools")
 
 
 @mcp.tool()
