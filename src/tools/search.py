@@ -1,7 +1,7 @@
 """DuckDuckGo web search tool, free and keyless."""
 import time
 from ddgs import DDGS
-from ddgs.exceptions import DuckDuckGoSearchException
+from ddgs.exceptions import DDGSException
 
 
 def web_search(query: str, max_results: int = 5, retries: int = 2) -> list[dict]:
@@ -20,7 +20,7 @@ def web_search(query: str, max_results: int = 5, retries: int = 2) -> list[dict]
                 }
                 for r in results
             ]
-        except (DuckDuckGoSearchException, Exception) as e:
+        except (DDGSException, Exception) as e:
             if attempt < retries:
                 time.sleep(1.5 * (attempt + 1))  # simple backoff
                 continue

@@ -3,8 +3,9 @@ from src.llm import call_llm_json
 from src.state import GraphState, ResearchStep
 
 SYSTEM_PROMPT = """You are a research planner. Given a research question, break it \
-down into 2-5 concrete, independently-answerable sub-questions that together would \
-let someone write a well-sourced report answering the original question.
+down into 2-3 concrete, independently-answerable sub-questions (no more than 3) \
+that together would let someone write a well-sourced report answering the original \
+question.
 
 Respond ONLY with JSON in this exact shape, no other text:
 {"sub_questions": ["question 1", "question 2", ...]}
