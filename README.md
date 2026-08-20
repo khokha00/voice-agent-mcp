@@ -1,4 +1,4 @@
-# voice-agent-mcp
+# research-agent-mcp
 
 A multi-agent research assistant. Give it a question, and a LangGraph pipeline
 of **Planner → Researcher → Writer → Critic** agents investigates it using
@@ -91,18 +91,5 @@ uv run python -m tests.test_notion_tools
 uv run python -m tests.test_mcp_server_standalone
 ```
 
-## Known limitations
 
-- Groq's free tier rate-limits fairly aggressively; `llm.py` retries with
-  backoff on 429s, but heavy runs will still slow down.
-- Notion tool routing uses a keyword heuristic ("my notes", etc.), not an
-  LLM decision — cheap, but misses on unusual phrasing.
-- The MCP client spins up a fresh server subprocess per call — simple, not
-  optimized for volume.
-- DuckDuckGo search retries on failure and returns an empty result rather
-  than crashing; the Researcher just skips that sub-question.
 
-## Non-goals
-
-No web UI, no real-time streaming, one custom MCP server only, no
-persisted conversation history, single-user/local only.
