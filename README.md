@@ -41,7 +41,7 @@ final report
 ## Project structure
 
 ```
-voice-agent-mcp/
+research-agent-mcp/
 ├── CHARTER.md
 ├── .env.example
 ├── src/
